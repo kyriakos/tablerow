@@ -1,40 +1,140 @@
 <?php
 
-class TableRow {
-	
-	protected $_table, $_skip = array ('id' ), $loaded = false, $loadJoins = false;
-	public $id;
-	protected $_foreignTables = array (), $_containing = array ();
+class TableRow
+{
 
-	function getTableName() {
-		return $this->_table;
-	}
+    protected $_skip = array('id'), $loaded = false, $_properties = [], $lazy = false;
 
-    static function getTableRow($where, $class = null, $debug = false)
+
+    /**
+     * @var mysqli|null
+     */
+    static $_table = null, $db = null;
+    static $_types = ['int' => 'i', 'float' => 'd', 'string' => 's', 'blob' => 'b', 'Date' => 's'];
+
+    static function getTableName()
     {
-        if ($class == null) $class = get_called_class();
-        $c = new $class();
-        $table = $c->getTableName();
-
-        $r = U::query("select id from $table where $where", $debug);
-
-        $out = null;
-        if (mysql_num_rows($r) == 1) {
-            $d = mysql_fetch_row($r);
-            $out = new $class($d[0]);
-        }
-
-        return $out;
-
+        return static::$_table;
     }
 
 
-    static function entryExists($id) {
+    static function entryExists($id)
+    {
         $id = (int)$id;
         $class = get_called_class();
         $c = new $class($id);
         return $c->isLoaded();
     }
+
+
+    private static function getMYSQLiValueTypes($values)
+    {
+        $s = '';
+        foreach ($values as $v) {
+            if (is_int($v)) $s .= 'i';
+            if (is_string($v)) $s .= 's';
+            if ((is_double($v)) || (is_float($v))) $s .= 'f';
+            if (is_object($v)) {
+                if (get_class($v) == 'DateTime') {
+                    $s .= 's';
+                } else {
+                    echo 'getMYSQLiValueTypes:unknown type';
+                }
+            }
+        }
+
+        return $s;
+    }
+
+
+    static function preSelect($fieldName, $id, $where = null, $values = null, $debug = false)
+    {
+        if (strlen(trim($where)) > 0) {
+            $add = 'and ' . $where;
+        } else {
+            $add = '';
+        }
+
+        if (!(is_array($values) || is_object($values))) {
+
+            $where = '`' . $fieldName . '` = ' . $id . ' ' . $add;
+
+        } else {
+
+            $where = '`' . $fieldName . '` = ? ' . $add;
+            $values = array_merge([(int)$id], $values);
+        }
+
+        var_dump($where);
+        return static::select($where, $values, $debug);
+
+    }
+
+    public static function select($where = null, $values = null, $debug = false)
+    {
+
+        // select all in case no where filter is specified
+        if ($where == null) $where = '1';
+        $useBind = false;
+
+
+        if ($values === true) $debug = true;
+        if (($values === null) && ($debug === false)) {
+            $useBind = false;
+        } else
+            if (is_object($values)) {
+                $values = get_object_vars($values);
+            }
+
+        // if we got an array of values then we should use a prepared statement
+        if (is_array($values)) {
+            $useBind = true;
+        }
+
+
+        $class = get_called_class();
+        $table = $class::getTableName();
+
+        if ($useBind) { // use a prepared statement and bind params
+
+            $s = TableRow::$db->stmt_init();
+            $q = "select id from $table where " . $where;
+            $prepareResult = $s->prepare($q);
+
+            if (!$prepareResult) {
+                if ($debug) echo 'Syntax Error. Could not prepare statement for ' . $q;
+            } else {
+                $types = TableRow::getMYSQLiValueTypes($values);
+
+
+                $bindResult = call_user_func_array([$s, 'bind_param'], TableRow::refValues(array_merge([$types], $values)));
+
+                if ($bindResult) {
+
+                    if ($s->execute()) {
+                        $r = $s->get_result();
+                    } else {
+                        if ($debug) echo 'Error Executing query:' . $q . ' types:' . $types . ' values:' . print_r($values, true);
+                    }
+
+                } else {
+                    if ($debug) echo 'Error Binding query:' . $q . ' types:' . $types . ' values:' . print_r($values, true);
+                }
+            }
+        } else { // run string query the old fashioned way
+            $r = U::query("select id from $table where $where", $debug);
+        }
+        $out = [];
+
+        if (get_class($r) == 'mysqli_result') {
+            foreach ($r as $d) {
+                $out[$d['id']] = new $class($d['id'], true);
+            }
+        }
+
+        return $out;
+    }
+
 
     static function getTableRowList($where, $class = null, $debug = false)
     {
@@ -56,238 +156,233 @@ class TableRow {
     }
 
 
-    function __construct($id = null, $loadJoins = false) {
-		if ($id != null) {
-			$this->id = ( int ) $id;
-			$r = U::query ( "select * from `$this->_table` where id = '$this->id'", false );
-			if (mysql_num_rows ( $r ) == 1) {
-				U::assignClassVariables ( mysql_fetch_assoc ( $r ), $this );
-				$this->loaded = true;
-			} else {
-				$this->loaded = false;
-			}
-		
-		}
-	
-	}
+    function __set($name, $val)
+    {
+        if (isset($this->_properties[$name])) {
+            $this->lazyLoad();
 
-	function propagate() {
-		// if ( ($this->loaded) && ($this->loadJoins) ) $this->loadJoins();
-		if (($this->loaded)) {
-			$this->loadJoins ();
-			$this->loadContainers ();
-		}
-	}
+            if (($this->_properties[$name]['hasRelation']) && (!is_object($val)) && ((int)$val > 0)) {
+                $class = $this->_properties[$name]['relatedClass'];
+                $this->_properties[$name]['value'] = new $class($val, true);
+            } else {
+                $this->_properties[$name]['value'] = $val;
+            }
+            $this->_properties[$name]['updated'] = true;
+        } else $this->$name = $val;
 
-	function isLoaded() {
-		return ($this->loaded);
-	}
+    }
 
-	function contains($class, $where) {
-		$this->_containing [$class] = $where;
-	}
+    function __get($name)
+    {
+        if (isset($this->_properties[$name])) {
+            $this->lazyLoad();
+            return $this->_properties[$name]['value'];
+        } else return null;
+    }
 
-	/**
-	 *
-	 * @param string $foreignkey
-	 *        	The name of the column in this table that will matched with
-	 *        	the foreign table's primary key
-	 * @param string $class
-	 *        	The class that represents the foreign table row
-	 */
-	
-	function joinTable($class, $foreignkey, $where = '') {
-		$this->_foreignTables [$class] = array ($class, $foreignkey, $where );
-	}
+    protected function loadObject($id)
+    {
+        $r = TableRow::$db->query("select * from `" . static::$_table . "` where id = '" . $id . "'", MYSQLI_STORE_RESULT);
 
-	private function joinTableQuery($id, $table, $key, $where) {
-		$q = "select " . $this->_table . ".id from " . $this->_table . ',' . $table . ' where 1 ';
-		if ($where != '')
-			$q .= ' and ' . $where;
-		if ($key != '') {
-			$q .= ' and ' . $this->_table . '.' . $key . ' = ' . $id;
-			$q .= ' and ' . $this->_table . '.' . $key . ' = ' . $table . '.id';
-		}
-		return U::query ( $q, false );
-	}
+        if ($r) {
+            $d = $r->fetch_assoc();
+            if ($d != null) {
+                foreach ($this->_properties as $field => $pro)
+                    $this->_properties[$field] = TableRow::TR_setValue($pro, $d[$field]);
+                $this->loaded = true;
+                $this->id = $id;
+            }
+        }
 
-	private function containsQuery($where) {
-		$q = "select * from $this->_table where " . $where;
-		return U::query ( $q, false );
-	}
+    }
 
-	function loadContainers() {
-		// echo 'loading containers for '.get_class($this).'<br>';
-		foreach ( $this->_containing as $class => $where ) {
-			$o = new $class ();
-			$r = $o->containsQuery ( $where );
-			
-			$c = mysql_num_rows ( $r );
-			$ids = array ();
-			for($i = 0; $i < $c; $i ++) {
-				$d = mysql_fetch_row ( $r );
-				$ids [] = $d [0];
-			}
-			
-			if (strpos($class,'\\')===FALSE) $classname = $class; else $classname = end(explode('\\',$class));
-			$this->$classname = new TableRowList ( $class, $ids );
-			$this->_skip [] = $classname;
-		}
-	
-	}
+    protected function lazyLoad()
+    {
+        if (($this->lazy) && ($this->id != null)) {
+            $this->loadObject($this->id);
+            $this->lazy = false;
+        }
+    }
 
-	function loadJoins() {
-		// echo 'loading joins for '.get_class($this).'<br>';
-		foreach ( $this->_foreignTables as $table ) {
-			$class = $table [0];
-			$o = new $class ();
-			$r = $o->joinTableQuery ( $this->id, $this->_table, $table [1], $table [2] );
-			$c = mysql_num_rows ( $r );
-			$ids = array ();
-			for($i = 0; $i < $c; $i ++) {
-				$d = mysql_fetch_row ( $r );
-				$ids [] = $d [0];
-			}
-			
-			if (strpos($class,'\\')===FALSE) $classname = $class; else $classname = end(explode('\\',$class));
-			$this->$classname = new TableRowList ( $class, $ids );
-			$this->_skip [] = $classname;
-		}
-	}
+    function __construct($id = null, $lazy = false)
+    {
+        if (($id != null) && ((int)$id != 0)) {
+            $id = ( int )$id;
+            $this->loaded = false;
 
-	function deleteRow() {
-		if ($this->id != null) {
-			$r = U::query ( "delete from `$this->_table` where id = '$this->id'", false );
-		}
-	}
+            if ($lazy) {
+                $this->lazy = true;
+                $this->id = $id;
+                $this->loaded = true;
+            } else {
+                $this->loadObject($id);
+            }
+        }
+    }
 
-	function save($debug=false) {
-		if ($this->id == null) {
-			$insert = U::buildInsertFields ( $this, $this->_skip );
-			$values = U::buildValueFields ( $this, $this->_skip );
-			$q = "INSERT INTO `$this->_table` (" . $insert . ") values (" . $values . ")";
-			
-			$r = U::query ( $q, $debug);
-			$error = mysql_errno ();
-			if ($error == 1062) {
-				return false;
-			} else {
-				$this->id = mysql_insert_id ();
-				return true;
-			}
-		
-		} else {
-			
-			$q = 'update `' . $this->_table . '` set ' . U::buildUpdateSets ( $this, $this->_skip ) . ' where id = ' . $this->id;
-			$r = U::query ( $q, $debug );
-			return true;
-		
-		}
-	}
+    function __toString()
+    {
+        $out = [];
+        $this->lazyLoad();
+        foreach ($this->_properties as $k => $p) $out[$k] = TableRow::TR_getValue($p);
 
-	function getFieldNames() {
-		$r = U::query ( "SELECT * FROM  " . $this->_table . " LIMIT 0 , 1" );
-		if (mysql_num_rows ( $r ) > 0) {
-			$l = mysql_fetch_assoc ( $r );
-			$arr = array ();
-			foreach ( $l as $k => $v ) {
-				$arr [] = $k;
-			}
-			return $arr;
-		} else
-			return false;
-	}
+        return print_r($out, true);
 
-	function selectAll() {
-		$r = U::query ( 'SELECT id from ' . $this->_table . ' WHERE 1' );
-		$ret = array ();
-		$class = get_class ( $this );
-		while ( $l = mysql_fetch_assoc ( $r ) ) {
-			$ar = new $class ( $l ['id'] );
-			$ret [$l ['id'] ] = $ar;
-		}
-		return $ret;
-	}
+    }
 
-}
 
-// --------------------------------------------------------------------------------------------
-class TableRowList implements ArrayAccess, Iterator,Countable {
-	private $arr = array (), $class = '';
-	private $position = 0;
+    function isLoaded()
+    {
+        return ($this->loaded);
+    }
 
-	function __construct($class, $ids) {
-		$this->class = $class;
-		$this->arr = $ids;
-		$this->position = 0;
-	}
 
-	// ---- COUNTABLE -----------------------
-	public function count() {
-		return count($this->arr);
-	}
-	
-	// ---- ARRAY ACCESS -----------------------
-	
-	public function offsetExists($offset) {
-		return (isset ( $this->arr [$offset] ));
-	}
+    function deleteRow()
+    {
+        if ($this->id != null) {
+            $r = U::query("delete from `$this->_table` where id = '$this->id'", false);
+        }
+    }
 
-	public function offsetGet($offset) {
-		
-		if (! is_object ( $this->arr [$offset] )) { // load from database
-			$this->arr [$offset] = new $this->class ( $this->arr [$offset] );
-		}
-		return $this->arr [$offset];
-	
-	}
+    protected function buildInsertFields()
+    {
+        return '(' . implode(', ', array_keys($this->_properties)) . ')';
+    }
 
-	public function offsetSet($offset, $value) {
-		$this->arr [$offset] = $value;
-	}
+    protected function buildUpdateQuery()
+    {
+        $s = [];
+        $values = [];
+        $count = 0;
+        $types = '';
+        foreach ($this->_properties as $k => $p) {
+            if ($p['updated']) {
+                $count++;
+                $s[] = '`' . $k . '` = ?';
+                $types .= TableRow::$_types[$p['type']];
+                $values[$k] = TableRow::TR_getValue($p);
+            }
+        }
+        $s = implode(', ', $s);
+        return ['sets' => $s, 'values' => $values, 'count' => $count, 'types' => $types];
+    }
 
-	public function offsetUnset($offset) {
-		unset ( $this->arr [$offset] );
-	}
-	
-	// ---- ITERATOR --------------------------
-	
-	function rewind() {
-		$this->position = 0;
-	}
 
-	function current() {
-		return $this->offsetGet ( $this->position );
-	}
+    protected static function TR_getValue($prop)
+    {
+        if ($prop['value'] == null) return $prop['default']; else {
+            if ($prop['hasRelation']) { // in case of a related object
+                if (is_object($prop['value'])) {
+                    return $prop['value']->id; // return its id
+                } else return $prop['value'];
+            } else
+                if ($prop['type'] == 'Date') return $prop['value']->format('Y-m-d H:i:s'); else {
+                    return $prop['value'];
+                }
 
-	function key() {
-		return $this->position;
-	}
+        }
+    }
 
-	function next() {
-		++ $this->position;
-	}
+    protected static function TR_setValue($prop, $value)
+    {
+        $type = $prop['type'];
+        if (($type == 'int') || ($type == 'float') || ($type == 'string')) {
+            $prop['value'] = $value;
+        } else
+            if ($type == 'Date') {
+                $prop['value'] = new DateTime($value);
+            } else {
+                if ($prop['hasRelation']) {
+                    $class = $prop['relatedClass'];
 
-	function valid() {
-		return isset ( $this->arr [$this->position] );
-	}
-}
+                    if ((is_string($value)) && ((int)$value > 0)) {
+                        $value = new $class($value, true);
+                    }
+                    $prop['value'] = $value;
+                } else {
+                    $prop['value'] = $value;
+                }
 
-// --------------------------------------------------------------------------------------------
-class TableList {
-	protected $_table, $_className;
+            }
 
-	function __construct($table, $class) {
-		$this->_table = $table;
-		$this->_className = $class;
-	}
+        return $prop;
 
-	function selectAll() {
-		$r = U::query ( 'SELECT * from ' . $this->_table . ' WHERE 1' );
-		return $r;
-	}
+    }
+
+
+    protected static function refValues($arr)
+    {
+        $refs = array();
+        foreach ($arr as $key => $value)
+            $refs[$key] = & $arr[$key];
+        return $refs;
+    }
+
+    function save($debug = false)
+    {
+        if (!$this->lazy) {
+
+            $s = TableRow::$db->stmt_init();
+
+            if ($this->id == null) {
+
+
+                $q = 'INSERT INTO ' . static::$_table . ' ' . $this->buildInsertFields() . ' VALUES (';
+                $q .= str_repeat('?, ', count($this->_properties));
+                $q = substr($q, 0, strlen($q) - 2) . ');';
+                if ($debug) echo '<br><b>' . $q . '</b>';
+                if ($s->prepare($q)) {
+
+                    $types = '';
+                    $values = [];
+
+                    foreach ($this->_properties as $field => $prop) {
+                        if ($prop['hasRelation']) $types .= 'i';
+                        else $types .= TableRow::$_types[$prop['type']];
+                        $values[] = TableRow::TR_getValue($prop);
+                    }
+
+                    call_user_func_array([$s, 'bind_param'], TableRow::refValues(array_merge([$types], $values)));
+
+                    $res = $s->execute();
+
+                    if ($res) $this->id = TableRow::$db->insert_id;
+                    if ($debug) echo '<br><em>' . TableRow::$db->error . '</em>';
+                    return $res;
+                } else {
+                    // @TODO log error with query here
+                }
+
+            } else {
+
+                $parts = $this->buildUpdateQuery();
+
+                if ($parts['count'] != 0) {
+                    $q = "UPDATE `" . static::$_table . "` set " . $parts['sets'] . " WHERE id = '" . $this->id . "';";
+
+                    if ($s->prepare($q)) {
+                        var_dump($parts);
+                        if (call_user_func_array([$s, 'bind_param'], TableRow::refValues(array_merge([$parts['types']], $parts['values'])))) {
+                            $res = $s->execute();
+
+                            if ($debug) echo '<br><em>' . TableRow::$db->error . '</em>';
+                            return $res;
+                        } else {
+                            //  @TODO log error with binding here
+                        }
+
+                    } else {
+                        //  @TODO log error with query here
+
+                        return false;
+                    }
+                }
+
+            }
+        }
+    }
+
 
 
 }
 
-?>
