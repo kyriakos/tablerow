@@ -24,7 +24,7 @@ $relations = [
 ];
 
 
-require "vendor/brainvial/tablerow/classgen/index.php";
+require "vendor/brainvial/tablerow/src/classgen/index.php";
 */
 
 
@@ -113,6 +113,7 @@ function outputSelect($classname)
 
     /**
     * @param string $where
+    * @param array|null $values
     * @param bool $debug
     * @return <?= $classname ?>[]
     */
@@ -220,7 +221,7 @@ function getPHPType($mysqlType)
     if (substr($mysqlType, 0, 7) == 'varchar') return 'string';
     if (substr($mysqlType, 0, 4) == 'text') return 'string';
     if (substr($mysqlType, 0, 10) == 'mediumtext') return 'string';
-    if (substr($mysqlType, 0, 8) == 'datetime') return 'Date';
+    if (substr($mysqlType, 0, 8) == 'datetime') return 'DateTime';
 }
 
 function makeClass($table, $classname = '')
