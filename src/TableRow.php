@@ -1,4 +1,5 @@
 <?php
+namespace Brainvial\BVFrame;
 
 class TableRow
 {
@@ -122,7 +123,7 @@ class TableRow
                 }
             }
         } else { // run string query the old fashioned way
-            $r = U::query("select id from $table where $where", $debug);
+            $r = \U::query("select id from $table where $where", $debug);
         }
         $out = [];
 
@@ -143,7 +144,7 @@ class TableRow
         $table = $c->getTableName();
 
 
-        $r = U::query("select id from $table where $where", $debug);
+        $r = \U::query("select id from $table where $where", $debug);
 
         $c = mysql_num_rows($r);
 
@@ -240,7 +241,7 @@ class TableRow
     function deleteRow()
     {
         if ($this->id != null) {
-            $r = U::query("delete from `$this->_table` where id = '$this->id'", false);
+            $r = \U::query("delete from `$this->_table` where id = '$this->id'", false);
         }
     }
 
@@ -290,7 +291,7 @@ class TableRow
             $prop['value'] = $value;
         } else
             if ($type == 'Date') {
-                $prop['value'] = new DateTime($value);
+                $prop['value'] = new \DateTime($value);
             } else {
                 if ($prop['hasRelation']) {
                     $class = $prop['relatedClass'];
