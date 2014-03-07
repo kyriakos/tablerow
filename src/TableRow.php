@@ -1,5 +1,5 @@
 <?php
-namespace Brainvial;
+namespace Brainvial\TableRow;
 
 class TableRow
 {

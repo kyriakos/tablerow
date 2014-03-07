@@ -49,7 +49,7 @@ foreach ($tables as $table => $classname) makeClass($table, $classname);
 function processTable($table, $className)
 {
     global $db;
-    $r = Brainvial\Framework\U::query("show full columns from $table", false);
+    $r = Brainvial\TableRow\TableRow::query("show full columns from $table", false);
 
     echo '<' . '?';
     outputProperties($r);
