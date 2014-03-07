@@ -54,6 +54,8 @@ function processTable($table, $className)
     echo '<' . '?';
     outputProperties($r);
     ?>
+    use Brainvial\TableRow\TableRow;
+
     class <?= $className ?> extends TableRow {
 
     static $_table = '<?= $table; ?>';
@@ -185,7 +187,7 @@ function field($d)
                 $default = "''";
                 break;
         }
-    } else $default = $d['Default'];
+    } else $default = '"'.$d['Default'].'"';
 
 
     return '[' . '"value" => null, "updated" => false, "default" => ' . $default . ', "type"=>"' . $type . '"' . $extras . ']';
