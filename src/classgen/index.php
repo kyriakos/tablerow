@@ -27,6 +27,7 @@ $relations = [
 require "vendor/brainvial/tablerow/classgen/index.php";
 */
 
+
 \Brainvial\TableRow\TableRow::connectDB($config);
 
 if (!isset($modelPath)) {
