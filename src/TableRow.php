@@ -13,9 +13,21 @@ class TableRow
     static $_table = null, $db = null;
     static $_types = ['int' => 'i', 'float' => 'd', 'string' => 's', 'blob' => 'b', 'Date' => 's'];
 
+    static function query($q, $debug = false)
+    {
+        $db = TableRow::$db;
+
+        $res = $db->query($q, MYSQLI_STORE_RESULT);
+        if ($debug) {
+            echo $q;
+            if ($db->errno != 0) print_r($db->error_list); else echo '<b>[SUCCESS]</b>';
+        }
+        return $res;
+    }
+
 
     static function connectDB($config) {
-        $db = new \mysqli($config['host'], $config['user'], $config['pass'], $config['db']);
+        $db = new \mysqli($config['host'], $config['user'], $config['pass'], $config['name']);
         static::$db = $db;
     }
 
@@ -129,7 +141,7 @@ class TableRow
                 }
             }
         } else { // run string query the old fashioned way
-            $r = U::query("select id from $table where $where", $debug);
+            $r = TableRow::query("select id from $table where $where", $debug);
         }
         $out = [];
 
@@ -150,7 +162,7 @@ class TableRow
         $table = $c->getTableName();
 
 
-        $r = U::query("select id from $table where $where", $debug);
+        $r = TableRow::query("select id from $table where $where", $debug);
 
         $c = mysql_num_rows($r);
 
@@ -247,7 +259,7 @@ class TableRow
     function deleteRow()
     {
         if ($this->id != null) {
-            $r = U::query("delete from `$this->_table` where id = '$this->id'", false);
+            $r = TableRow::query("delete from `$this->_table` where id = '$this->id'", false);
         }
     }
 

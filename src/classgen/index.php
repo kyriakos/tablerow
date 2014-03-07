@@ -1,13 +1,14 @@
-<?php
-include "../connect.php";
+<?
+// DO NOT RUN THIS FILE DIRECTLY. CREATE A NEW FILE IN THE PROJECT FOLDER LIKE THE FOLLOWING SAMPLE:
 
+// ====================================================
+// Sample Generate.php:
+/*
 
-if (!isset($modelPath)) {
-    echo '$modelPath not set. Terminated';
-    die(0);
-}
+include __DIR__.'/site/config.php';
+$config = $cfg[$cfg['test'] ? 'testdb' : 'db'];
+$modelPath = __DIR__.'/site/models/';
 
-//$modelPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'models' . DIRECTORY_SEPARATOR;
 $tables = array(
     'article' => 'Article',
     'categories' => 'Category',
@@ -17,9 +18,30 @@ $tables = array(
 /* Syntax for relations:
  * array('class'=>'[class-which-contains]', 'relation' => '[contained-class-name].[foreign-key-column-name]:[1 or * for quantity]:[method-name]');
 */
+/*
 $relations = [
     ['class' => 'Category', 'relation' => 'Article.category:*:getArticles']
 ];
+
+
+require "vendor/brainvial/tablerow/classgen/index.php";
+*/
+
+\Brainvial\TableRow\TableRow::connectDB($config);
+
+if (!isset($modelPath)) {
+    echo '$modelPath undefined';
+    die(0);
+}
+
+if (!isset($tables)) {
+    echo '$tables undefined';
+    die(0);
+}
+
+if (!isset($relations)) {
+    $relations = [];
+}
 
 
 foreach ($tables as $table => $classname) makeClass($table, $classname);
@@ -27,13 +49,11 @@ foreach ($tables as $table => $classname) makeClass($table, $classname);
 function processTable($table, $className)
 {
     global $db;
-    $r = U::query("show full columns from $table", false);
+    $r = Brainvial\Framework\U::query("show full columns from $table", false);
 
     echo '<' . '?';
     outputProperties($r);
     ?>
-    use Brainvial\TableRow;
-
     class <?= $className ?> extends TableRow {
 
     static $_table = '<?= $table; ?>';
@@ -76,9 +96,9 @@ function outputRelationMethods($table, $className)
 
             ?>
 
-    public function <?= $r->methodName ?> ($where = null,$values = null,$debug = null) {
-        return <?=$r->foreignClass ?>::preSelect('<?=$r->property ?>',$this->id,$where,$values,$debug);
-    }
+            public function <?= $r->methodName ?> ($where = null,$values = null,$debug = null) {
+            return <?= $r->foreignClass ?>::preSelect('<?= $r->property ?>',$this->id,$where,$values,$debug);
+            }
         <?
         }
     }
@@ -95,7 +115,7 @@ function outputSelect($classname)
     */
     public static function select($where = null, $values = null, $debug = false)
     {
-        return parent::select($where,$values,$debug);
+    return parent::select($where,$values,$debug);
     }
 <?
 }
@@ -211,5 +231,5 @@ function makeClass($table, $classname = '')
     $data = ob_get_clean();
     global $modelPath;
     file_put_contents($modelPath . $classname . '.php', $data);
-   // echo nl2br(htmlspecialchars($data));
+    // echo nl2br(htmlspecialchars($data));
 }
