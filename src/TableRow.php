@@ -1,5 +1,5 @@
 <?php
-namespace Brainvial\BVFrame;
+namespace Brainvial;
 
 class TableRow
 {
@@ -12,6 +12,12 @@ class TableRow
      */
     static $_table = null, $db = null;
     static $_types = ['int' => 'i', 'float' => 'd', 'string' => 's', 'blob' => 'b', 'Date' => 's'];
+
+
+    static function connectDB($config) {
+        $db = new \mysqli($config['host'], $config['user'], $config['pass'], $config['db']);
+        static::$db = $db;
+    }
 
     static function getTableName()
     {
@@ -123,7 +129,7 @@ class TableRow
                 }
             }
         } else { // run string query the old fashioned way
-            $r = \U::query("select id from $table where $where", $debug);
+            $r = U::query("select id from $table where $where", $debug);
         }
         $out = [];
 
@@ -144,7 +150,7 @@ class TableRow
         $table = $c->getTableName();
 
 
-        $r = \U::query("select id from $table where $where", $debug);
+        $r = U::query("select id from $table where $where", $debug);
 
         $c = mysql_num_rows($r);
 
@@ -241,7 +247,7 @@ class TableRow
     function deleteRow()
     {
         if ($this->id != null) {
-            $r = \U::query("delete from `$this->_table` where id = '$this->id'", false);
+            $r = U::query("delete from `$this->_table` where id = '$this->id'", false);
         }
     }
 
