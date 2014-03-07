@@ -1,7 +1,7 @@
 {
     "name": "brainvial/tablerow",
     "autoload": {
-        "psr-0": {"Brainvial\\": "src/"}
+        "psr-0": {"Brainvial": "src/"}
     }
 
 }
