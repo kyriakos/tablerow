@@ -1,12 +1,14 @@
 <?php
 namespace Brainvial\TableRow;
 
+
+use Brainvial\TableRow\TableRowIterator;
+
 use mysqli;
 
 class TableRow {
 
 	protected $_skip = array( 'id' ), $loaded = false, $_properties = [ ], $lazy = false;
-
 
 	/**
 	 * @var \mysqli $db
@@ -52,9 +54,9 @@ class TableRow {
 		if ( $s->prepare( $q ) ) {
 			$types = TableRow::getMYSQLiValueTypes( $values );
 			$bindResult = call_user_func_array( [
-					$s,
-					'bind_param'
-				], TableRow::refValues( array_merge( [ $types ], $values ) ) );
+				$s,
+				'bind_param'
+			], TableRow::refValues( array_merge( [ $types ], $values ) ) );
 			if ( $bindResult ) {
 				if ( $s->execute() ) {
 					return $s->get_result();
@@ -148,7 +150,8 @@ class TableRow {
 
 	}
 
-	public static function select( $where = null, $values = null, $debug = false ) {
+
+	public static function select( $where = null, $values = null, $debug = false, $lazy = false ) {
 
 		// select all in case no where filter is specified
 		if ( $where == null ) {
@@ -158,8 +161,10 @@ class TableRow {
 
 
 		if ( $values === true ) {
+			$lazy = $debug;
 			$debug = true;
 		}
+
 		if ( ( $values === null ) && ( $debug === false ) ) {
 			$useBind = false;
 		} else if ( is_object( $values ) ) {
@@ -190,9 +195,9 @@ class TableRow {
 
 
 				$bindResult = call_user_func_array( [
-						$s,
-						'bind_param'
-					], TableRow::refValues( array_merge( [ $types ], $values ) ) );
+					$s,
+					'bind_param'
+				], TableRow::refValues( array_merge( [ $types ], $values ) ) );
 
 				if ( $bindResult ) {
 
@@ -216,9 +221,17 @@ class TableRow {
 		$out = [ ];
 
 		if ( get_class( $r ) == 'mysqli_result' ) {
-			foreach ( $r as $d ) {
-				$out[ $d['id'] ] = new $class( $d['id'], true );
-			}
+
+			$tr = new TableRowIterator( $r, $class );
+			return $tr;
+
+
+			/*
+						foreach ( $r as $d ) {
+							$out[ $d['id'] ] = new $class( $d['id'], true );
+						}
+
+			*/
 		}
 
 		return $out;
@@ -240,7 +253,7 @@ class TableRow {
 		$out = array();
 		for ( $i = 0; $i < $c; $i ++ ) {
 			$d = mysql_fetch_row( $r );
-			$out[ $d[0] ] = new $class( $d[0] );
+			$out[$d[0]] = new $class( $d[0] );
 		}
 
 		return $out;
@@ -248,16 +261,16 @@ class TableRow {
 
 
 	function __set( $name, $val ) {
-		if ( isset( $this->_properties[ $name ] ) ) {
+		if ( isset( $this->_properties[$name] ) ) {
 			$this->lazyLoad();
 
-			if ( ( $this->_properties[ $name ]['hasRelation'] ) && ( !is_object( $val ) ) && ( (int) $val > 0 ) ) {
-				$class = $this->_properties[ $name ]['relatedClass'];
-				$this->_properties[ $name ]['value'] = new $class( $val, true );
+			if ( ( $this->_properties[$name]['hasRelation'] ) && ( !is_object( $val ) ) && ( (int) $val > 0 ) ) {
+				$class = $this->_properties[$name]['relatedClass'];
+				$this->_properties[$name]['value'] = new $class( $val, true );
 			} else {
-				$this->_properties[ $name ]['value'] = $val;
+				$this->_properties[$name]['value'] = $val;
 			}
-			$this->_properties[ $name ]['updated'] = true;
+			$this->_properties[$name]['updated'] = true;
 		} else {
 			$this->$name = $val;
 		}
@@ -265,12 +278,12 @@ class TableRow {
 	}
 
 	function __get( $name ) {
-		if ( isset( $this->_properties[ $name ] ) ) {
+		if ( isset( $this->_properties[$name] ) ) {
 			$this->lazyLoad();
 
-			return $this->_properties[ $name ]['value'];
+			return $this->_properties[$name]['value'];
 		} else {
-			return null;
+			throw new \Exception( 'Invalid model property "' . $name . '"' );
 		}
 	}
 
@@ -281,7 +294,7 @@ class TableRow {
 			$d = $r->fetch_assoc();
 			if ( $d != null ) {
 				foreach ( $this->_properties as $field => $pro ) {
-					$this->_properties[ $field ] = TableRow::TR_setValue( $pro, $d[ $field ] );
+					$this->_properties[$field] = TableRow::TR_setValue( $pro, $d[$field] );
 				}
 				$this->loaded = true;
 				$this->id = $id;
@@ -305,7 +318,7 @@ class TableRow {
 			if ( $lazy ) {
 				$this->lazy = true;
 				$this->id = $id;
-				$this->loaded = true;
+				$this->loaded = false;
 			} else {
 				$this->loadObject( $id );
 			}
@@ -316,7 +329,7 @@ class TableRow {
 		$out = [ ];
 		$this->lazyLoad();
 		foreach ( $this->_properties as $k => $p ) {
-			$out[ $k ] = TableRow::TR_getValue( $p );
+			$out[$k] = TableRow::TR_getValue( $p );
 		}
 
 		return print_r( $out, true );
@@ -325,6 +338,7 @@ class TableRow {
 
 
 	function isLoaded() {
+		$this->lazyLoad();
 		return ( $this->loaded );
 	}
 
@@ -354,8 +368,14 @@ class TableRow {
 			if ( $p['updated'] ) {
 				$count ++;
 				$s[] = '`' . $k . '` = ?';
-				$types .= TableRow::$_types[ $p['type'] ];
-				$values[ $k ] = TableRow::TR_getValue( $p );
+
+				if ( $p['hasRelation'] ) {
+					$types .= 'i'; // if its a relation then its type int (for the ID)
+				} else { // if not then infer the type.
+					$types .= TableRow::$_types[$p['type']];
+				}
+
+				$values[$k] = TableRow::TR_getValue( $p );
 			}
 		}
 		$s = implode( ', ', $s );
@@ -411,7 +431,7 @@ class TableRow {
 	protected static function refValues( $arr ) {
 		$refs = array();
 		foreach ( $arr as $key => $value ) {
-			$refs[ $key ] = & $arr[ $key ];
+			$refs[$key] = & $arr[$key];
 		}
 
 		return $refs;
@@ -437,15 +457,15 @@ class TableRow {
 						if ( $prop['hasRelation'] ) {
 							$types .= 'i';
 						} else {
-							$types .= TableRow::$_types[ $prop['type'] ];
+							$types .= TableRow::$_types[$prop['type']];
 						}
 						$values[] = TableRow::TR_getValue( $prop );
 					}
 
 					call_user_func_array( [
-							$s,
-							'bind_param'
-						], TableRow::refValues( array_merge( [ $types ], $values ) ) );
+						$s,
+						'bind_param'
+					], TableRow::refValues( array_merge( [ $types ], $values ) ) );
 
 					$res = $s->execute();
 					if ( $res ) {
@@ -473,9 +493,9 @@ class TableRow {
 					if ( $s->prepare( $q ) ) {
 						var_dump( $parts );
 						if ( call_user_func_array( [
-								$s,
-								'bind_param'
-							], TableRow::refValues( array_merge( [ $parts['types'] ], $parts['values'] ) ) )
+							$s,
+							'bind_param'
+						], TableRow::refValues( array_merge( [ $parts['types'] ], $parts['values'] ) ) )
 						) {
 							$res = $s->execute();
 
@@ -498,6 +518,5 @@ class TableRow {
 			}
 		}
 	}
-
 
 }

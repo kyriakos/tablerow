@@ -117,9 +117,9 @@ function outputSelect($classname)
 	* @param bool $debug
 	* @return <?= $classname ?>[]
 	*/
-	public static function select($where = null, $values = null, $debug = false)
+	public static function select($where = null, $values = null, $debug = false, $lazy = false)
 	{
-	return parent::select($where,$values,$debug);
+	return parent::select($where, $values, $debug, $lazy);
 	}
 <?
 }
