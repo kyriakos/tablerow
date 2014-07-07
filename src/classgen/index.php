@@ -6,6 +6,8 @@
 /*
 
 include __DIR__.'/site/config.php';
+require "vendor/autoload.php";
+
 $config = $cfg[$cfg['test'] ? 'testdb' : 'db'];
 $modelPath = __DIR__.'/site/models/';
 
