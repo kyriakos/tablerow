@@ -47,11 +47,21 @@ class TableRow {
 		return static::$db->real_escape_string( $s );
 	}
 
-	static function count( $q = null ) {
+	static function count( $q = null, $values = null, $debug = false ) {
 		if ( $q == null ) {
 			$q = 1;
 		}
-		$res = TableRow::$db->query( "select count(id) as totalcols from " . static::$_table . ' where ' . $q );
+
+		$query = "select count(id) as totalcols from " . static::$_table . ' where ' . $q;
+		if ( is_array( $values ) ) {
+			$res = TableRow::preparedQuery( $query, $values, $debug );
+		} else {
+			if ( $values === true ) {
+				$debug = true;
+			}
+			$res = TableRow::$db->query( $query );
+		}
+
 
 		return $res->fetch_array()[0];
 	}
@@ -393,7 +403,7 @@ class TableRow {
 
 
 	protected static function TR_getValue( $prop ) {
-		if ( $prop['value'] == null ) {
+		if ( $prop['value'] === null ) {
 			return $prop['default'];
 		} else {
 			if ( $prop['hasRelation'] ) { // in case of a related object
