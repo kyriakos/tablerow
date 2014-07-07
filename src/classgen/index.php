@@ -222,9 +222,12 @@ function getPHPType($mysqlType)
 	if (substr($mysqlType, 0, 7) == 'tinyint') return 'int';
 	if (substr($mysqlType, 0, 7) == 'varchar') return 'string';
 	if (substr($mysqlType, 0, 4) == 'text') return 'string';
+	if (substr($mysqlType, 0, 4) == 'enum') return 'string';
+	if (substr($mysqlType, 0, 4) == 'char') return 'string';
 	if (substr($mysqlType, 0, 10) == 'mediumtext') return 'string';
+	if (substr($mysqlType, 0, 8) == 'longtext') return 'string';
 	if (substr($mysqlType, 0, 8) == 'datetime') return 'DateTime';
-}
+	if (substr($mysqlType, 0, 9) == 'timestamp') return 'DateTime';}
 
 function makeClass($table, $classname = '')
 {

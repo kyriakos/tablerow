@@ -16,7 +16,15 @@ class TableRow {
 	static $db;
 
 	static $_table = null;
-	static $_types = [ 'int' => 'i', 'float' => 'd', 'string' => 's', 'blob' => 'b', 'DateTime' => 's' ];
+	static $_types = [
+		'int' => 'i',
+		'float' => 'd',
+		'string' => 's',
+		'blob' => 'b',
+		'DateTime' => 's',
+		'char' => 's',
+		'enum' => 's'
+	];
 
 	static function query( $q, $debug = false ) {
 		$db = TableRow::$db;
