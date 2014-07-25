@@ -212,7 +212,7 @@ function outputProperties($r, $classname)
 		}
 	}
 
-	echo '@method static '.$classname.' selectOne(string $where = null, array $values = null, bool $debug = false, bool $lazy = false) fetches just one '.$classname.' instance';
+	echo '* @method static '.$classname.' selectOne(string $where = null, array $values = null, bool $debug = false, bool $lazy = false) fetches just one '.$classname.' instance'.PHP_EOL;
 	echo '**/' . PHP_EOL . PHP_EOL;
 }
 
