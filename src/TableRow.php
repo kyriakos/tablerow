@@ -145,6 +145,12 @@ class TableRow {
 	}
 
 
+	public static function selectOne( $where = null, $values = null, $debug = false, $lazy = false ) {
+		$selected = static::select( $where, $values, $debug, $lazy );
+		if (count($selected)==0 ) return null;
+		return $selected->current();
+	}
+
 	static function preSelect( $fieldName, $id, $where = null, $values = null, $debug = false ) {
 		if ( strlen( trim( $where ) ) > 0 ) {
 			$add = 'and ' . $where;
@@ -162,7 +168,7 @@ class TableRow {
 			$values = array_merge( [ (int) $id ], $values );
 		}
 
-		var_dump( $where );
+
 
 		return static::select( $where, $values, $debug );
 
@@ -363,7 +369,7 @@ class TableRow {
 
 	function deleteRow() {
 		if ( $this->id != null ) {
-			$r = TableRow::query( "delete from `$this->_table` where id = '$this->id'", false );
+			$r = TableRow::query( "delete from `".static::$_table."` where id = '$this->id'", false );
 		}
 	}
 
@@ -446,6 +452,7 @@ class TableRow {
 	}
 
 
+
 	protected static function refValues( $arr ) {
 		$refs = array();
 		foreach ( $arr as $key => $value ) {
@@ -453,6 +460,16 @@ class TableRow {
 		}
 
 		return $refs;
+	}
+
+	/**
+	 * Creates a stdClass object with all the instance variables of this model entry.
+	 * Use it to return Models to client via JSON etc
+	 * @param bool $fromDB
+	 * @return \stdClass
+	 */
+	function getStaticObject($fromDB = false) {
+		return new \stdClass();
 	}
 
 	function save( $debug = false ) {
@@ -480,6 +497,9 @@ class TableRow {
 						$values[] = TableRow::TR_getValue( $prop );
 					}
 
+					if ($debug) {
+						echo '<br> types:'.$types.' values:'.print_r($values).'<br>';
+					}
 					call_user_func_array( [
 						$s,
 						'bind_param'
@@ -509,7 +529,7 @@ class TableRow {
 					$q = "UPDATE `" . static::$_table . "` set " . $parts['sets'] . " WHERE id = '" . $this->id . "';";
 
 					if ( $s->prepare( $q ) ) {
-						var_dump( $parts );
+
 						if ( call_user_func_array( [
 							$s,
 							'bind_param'

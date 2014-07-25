@@ -55,7 +55,7 @@ function processTable($table, $className)
 	$r = Brainvial\TableRow\TableRow::query("show full columns from $table", false);
 
 	echo '<' . '? '.PHP_EOL.'use Brainvial\TableRow\TableRow;'.PHP_EOL.PHP_EOL;
-	outputProperties($r);
+	outputProperties($r, $className);
 	?>
 
 
@@ -197,7 +197,7 @@ function field($d)
 	return '[' . '"value" => null, "updated" => false, "default" => ' . $default . ', "type"=>"' . $type . '"' . $extras . ']';
 }
 
-function outputProperties($r)
+function outputProperties($r, $classname)
 {
 
 	echo '/**' . PHP_EOL;
@@ -211,6 +211,8 @@ function outputProperties($r)
 			echo '* @property ' . $type . ' $' . $d['Field'] . PHP_EOL;
 		}
 	}
+
+	echo '@method static '.$classname.' selectOne(string $where = null, array $values = null, bool $debug = false, bool $lazy = false) fetches just one '.$classname.' instance';
 	echo '**/' . PHP_EOL . PHP_EOL;
 }
 
