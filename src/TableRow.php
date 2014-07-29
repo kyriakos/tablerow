@@ -147,7 +147,9 @@ class TableRow {
 
 	public static function selectOne( $where = null, $values = null, $debug = false, $lazy = false ) {
 		$selected = static::select( $where, $values, $debug, $lazy );
-		if (count($selected)==0 ) return null;
+		if ( count( $selected ) == 0 ) {
+			return null;
+		}
 		return $selected->current();
 	}
 
@@ -167,7 +169,6 @@ class TableRow {
 			$where = '`' . $fieldName . '` = ? ' . $add;
 			$values = array_merge( [ (int) $id ], $values );
 		}
-
 
 
 		return static::select( $where, $values, $debug );
@@ -369,7 +370,7 @@ class TableRow {
 
 	function deleteRow() {
 		if ( $this->id != null ) {
-			$r = TableRow::query( "delete from `".static::$_table."` where id = '$this->id'", false );
+			$r = TableRow::query( "delete from `" . static::$_table . "` where id = '$this->id'", false );
 		}
 	}
 
@@ -452,7 +453,6 @@ class TableRow {
 	}
 
 
-
 	protected static function refValues( $arr ) {
 		$refs = array();
 		foreach ( $arr as $key => $value ) {
@@ -465,11 +465,34 @@ class TableRow {
 	/**
 	 * Creates a stdClass object with all the instance variables of this model entry.
 	 * Use it to return Models to client via JSON etc
-	 * @param bool $fromDB
+	 * @param bool $includeID Will include the instance ID in the properties of the static
+	 * @param bool $fromDB Will reload object from DB before creating static
 	 * @return \stdClass
 	 */
-	function getStaticObject($fromDB = false) {
-		return new \stdClass();
+	function getStaticObject( $includeID = false, $fromDB = false ) {
+
+		$s = new \stdClass();
+		if ( $includeID ) {
+			$s->id = $this->id;
+		}
+
+		if ( $fromDB ) {
+			if ( $this->id != null ) {
+				$class = get_class( $this );
+				$obj = new $class( $this->id );
+				$ref = new \ReflectionClass( $obj );
+				$properties = $ref->getProperty( '_properties' );
+			} else throw new \Exception('ID is null');
+		} else {
+			$properties = $this->_properties;
+		}
+
+
+		foreach ( $properties as $k => $prop ) {
+
+			$s->$k = static::TR_getValue( $prop );
+		}
+		return $s;
 	}
 
 	function save( $debug = false ) {
@@ -497,8 +520,8 @@ class TableRow {
 						$values[] = TableRow::TR_getValue( $prop );
 					}
 
-					if ($debug) {
-						echo '<br> types:'.$types.' values:'.print_r($values).'<br>';
+					if ( $debug ) {
+						echo '<br> types:' . $types . ' values:' . print_r( $values ) . '<br>';
 					}
 					call_user_func_array( [
 						$s,
