@@ -10,9 +10,9 @@ namespace Brainvial\TableRow;
 
 use mysqli_result;
 use mysqli;
-use Iterator,Countable;
+use Iterator, Countable;
 
-class TableRowIterator implements Iterator,Countable {
+class TableRowIterator implements Iterator, Countable {
 	/**
 	 * (PHP 5 &gt;= 5.1.0)<br/>
 	 * Count elements of an object
@@ -38,7 +38,7 @@ class TableRowIterator implements Iterator,Countable {
 	/**
 	 * @var int
 	 */
-	private $position = -1;
+	private $position = - 1;
 
 	private $currentObj = null;
 
@@ -49,7 +49,7 @@ class TableRowIterator implements Iterator,Countable {
 	 * @return mixed Can return any type.
 	 */
 	public function current() {
-		if ($this->currentObj == null) {
+		if ( $this->currentObj == null ) {
 			$this->next();
 		}
 		return $this->currentObj;
@@ -62,10 +62,10 @@ class TableRowIterator implements Iterator,Countable {
 	 * @return void Any returned value is ignored.
 	 */
 	public function next() {
-		$this->position++;
+		$this->position ++;
 		$class = $this->class;
 		$d = $this->resultSet->fetch_row();
-		$this->currentObj = new $class($d[0]);
+		$this->currentObj = new $class( $d[0] );
 	}
 
 	/**
@@ -75,7 +75,7 @@ class TableRowIterator implements Iterator,Countable {
 	 * @return mixed scalar on success, or null on failure.
 	 */
 	public function key() {
-		return ($this->position == -1) ? 0 : $this->position;
+		return ( $this->position == - 1 ) ? 0 : $this->position;
 	}
 
 	/**
@@ -86,7 +86,7 @@ class TableRowIterator implements Iterator,Countable {
 	 * Returns true on success or false on failure.
 	 */
 	public function valid() {
-		return ($this->position < ($this->resultSet->num_rows));
+		return ( ( $this->position < ( $this->resultSet->num_rows ) ) && ( $this->resultSet->num_rows != 0 ) );
 	}
 
 	/**
@@ -96,9 +96,9 @@ class TableRowIterator implements Iterator,Countable {
 	 * @return void Any returned value is ignored.
 	 */
 	public function rewind() {
-		$this->position = -1;
+		$this->position = - 1;
 		$this->currentObj = null;
-		$this->resultSet->data_seek(0);
+		$this->resultSet->data_seek( 0 );
 	}
 
 

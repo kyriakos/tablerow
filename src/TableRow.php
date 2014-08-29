@@ -3,6 +3,8 @@ namespace Brainvial\TableRow;
 
 
 use Brainvial\TableRow\TableRowIterator;
+use Brainvial\TableRow\Point;
+use Brainvial\TableRow\Polygon;
 
 use mysqli;
 
@@ -22,6 +24,8 @@ class TableRow {
 		'string' => 's',
 		'blob' => 'b',
 		'DateTime' => 's',
+		'Polygon' => 's',
+		'Point' => 's',
 		'char' => 's',
 		'enum' => 's'
 	];
@@ -133,7 +137,8 @@ class TableRow {
 				$s .= 'f';
 			}
 			if ( is_object( $v ) ) {
-				if ( get_class( $v ) == 'DateTime' ) {
+				$class = get_class( $v );
+				if ( ( $class == 'DateTime' ) || ( $class == 'Polygon' ) || ( $class == 'Point' ) ) {
 					$s .= 's';
 				} else {
 					echo 'getMYSQLiValueTypes:unknown type';
@@ -313,13 +318,35 @@ class TableRow {
 	}
 
 	protected function loadObject( $id ) {
-		$r = TableRow::$db->query( "select * from `" . static::$_table . "` where id = '" . $id . "'", MYSQLI_STORE_RESULT );
+		$decodeFields = '';
+
+
+		foreach ( $this->_properties as $field => $pro ) {
+			$type = $pro['type'];
+			if ( ( $type == 'Polygon' ) || ( $type == 'Point' ) ) {
+				$decodeFields = 'asText(`' . $field . '`) as  trdec_' . $field;
+			}
+		}
+
+		if ( strlen( $decodeFields ) > 0 ) {
+			$decodeFields = ',' . $decodeFields;
+		}
+
+		$r = TableRow::$db->query( "select * $decodeFields from `" . static::$_table . "` where id = '" . $id . "'", MYSQLI_STORE_RESULT );
 
 		if ( $r ) {
 			$d = $r->fetch_assoc();
 			if ( $d != null ) {
 				foreach ( $this->_properties as $field => $pro ) {
-					$this->_properties[$field] = TableRow::TR_setValue( $pro, $d[$field] );
+					$v = $d[$field];
+					if ( $pro['type'] == 'Point' )  {
+						$v = $d['trdec_' . $field];
+					}
+
+					if ( $pro['type'] == 'Polygon' ) {
+						$v = $d['trdec_' . $field];
+					}
+					$this->_properties[$field] = TableRow::TR_setValue( $pro, $v );
 				}
 				$this->loaded = true;
 				$this->id = $id;
@@ -392,7 +419,12 @@ class TableRow {
 		foreach ( $this->_properties as $k => $p ) {
 			if ( $p['updated'] ) {
 				$count ++;
-				$s[] = '`' . $k . '` = ?';
+
+				if ( $p['type'] == 'Point' ) {
+					$s[] = '`' . $k . '` = GeomFromText(?)';
+				} else {
+					$s[] = '`' . $k . '` = ?';
+				}
 
 				if ( $p['hasRelation'] ) {
 					$types .= 'i'; // if its a relation then its type int (for the ID)
@@ -421,6 +453,8 @@ class TableRow {
 				}
 			} else if ( $prop['type'] == 'DateTime' ) {
 				return $prop['value']->format( 'Y-m-d H:i:s' );
+			} else if ( ( $prop['type'] == 'Polygon' ) || ( $prop['type'] == 'Point' ) ) {
+				return $prop['value']->__toString();
 			} else {
 				return $prop['value'];
 			}
@@ -428,12 +462,16 @@ class TableRow {
 		}
 	}
 
-	protected static function TR_setValue( $prop, $value ) {
+	protected static function TR_setValue( $prop, $value, $field = null ) {
 		$type = $prop['type'];
 		if ( ( $type == 'int' ) || ( $type == 'float' ) || ( $type == 'string' ) ) {
 			$prop['value'] = $value;
 		} else if ( $type == 'DateTime' ) {
 			$prop['value'] = new \DateTime( $value );
+		} else if ( $type == 'Point' ) {
+			$prop['value'] = Point::fromString( $value );
+		} else if ( $type == 'Polygon' ) {
+			$prop['value'] = Polygon::fromString( $value );
 		} else {
 			if ( $prop['hasRelation'] ) {
 				$class = $prop['relatedClass'];
@@ -482,7 +520,9 @@ class TableRow {
 				$obj = new $class( $this->id );
 				$ref = new \ReflectionClass( $obj );
 				$properties = $ref->getProperty( '_properties' );
-			} else throw new \Exception('ID is null');
+			} else {
+				throw new \Exception( 'ID is null' );
+			}
 		} else {
 			$properties = $this->_properties;
 		}
@@ -501,8 +541,21 @@ class TableRow {
 			if ( $this->id == null ) {
 
 				$q = 'INSERT INTO ' . static::$_table . ' ' . $this->buildInsertFields() . ' VALUES (';
-				$q .= str_repeat( '?, ', count( $this->_properties ) );
+
+//				$q .= str_repeat( '?, ', count( $this->_properties ) );
+
+				foreach ( $this->_properties as $prop ) {
+					$type = $prop['type'];
+					if ( ( $type === 'Point' ) || ( $type === 'Polygon' ) ) {
+						$q .= 'GeomFromText(?), ';
+					} else {
+						$q .= '?, ';
+					}
+				}
+
 				$q = substr( $q, 0, strlen( $q ) - 2 ) . ');';
+
+
 				if ( $debug ) {
 					echo '<br><b>' . $q . '</b>';
 				}
@@ -521,7 +574,7 @@ class TableRow {
 					}
 
 					if ( $debug ) {
-						echo '<br> types:' . $types . ' values:' . print_r( $values ) . '<br>';
+						echo '<br> types:' . $types . ' values:' . print_r( $values,true ) . '<br>';
 					}
 					call_user_func_array( [
 						$s,
