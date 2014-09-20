@@ -233,14 +233,22 @@ function getPHPType($mysqlType)
 
 function makeClass($table, $classname = '')
 {
+
 	if ($classname == '') {
 		$classname = ucfirst(substr($table, 0, strlen($table) - 1));
 	}
+
+	echo 'Generating Class <b>'.$classname.'</b><br>';
 
 	ob_start();
 	processTable($table, $classname);
 	$data = ob_get_clean();
 	global $modelPath;
-	file_put_contents($modelPath . $classname . '.php', $data);
+	if (!file_exists($modelPath . $classname . '.php')) {
+		file_put_contents( $modelPath . $classname . '.php', $data );
+	} else {
+		echo '<em>'.$modelPath . $classname . '.php already exists. Will not overwrite.</em><br><br>';
+	}
 	// echo nl2br(htmlspecialchars($data));
+
 }

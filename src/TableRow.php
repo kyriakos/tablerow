@@ -19,15 +19,15 @@ class TableRow {
 
 	static $_table = null;
 	static $_types = [
-		'int' => 'i',
-		'float' => 'd',
-		'string' => 's',
-		'blob' => 'b',
+		'int'      => 'i',
+		'float'    => 'd',
+		'string'   => 's',
+		'blob'     => 'b',
 		'DateTime' => 's',
-		'Polygon' => 's',
-		'Point' => 's',
-		'char' => 's',
-		'enum' => 's'
+		'Polygon'  => 's',
+		'Point'    => 's',
+		'char'     => 's',
+		'enum'     => 's'
 	];
 
 	static function query( $q, $debug = false ) {
@@ -107,6 +107,12 @@ class TableRow {
 
 	static function connectDB( $config ) {
 		$db = new \mysqli( $config['host'], $config['user'], $config['pass'], $config['name'] );
+		$db->set_charset(
+			'"utf8"'
+		);
+
+		$db->query("SET NAMES 'UTF8';");
+
 		static::$db = $db;
 	}
 
@@ -155,6 +161,7 @@ class TableRow {
 		if ( count( $selected ) == 0 ) {
 			return null;
 		}
+
 		return $selected->current();
 	}
 
@@ -165,7 +172,7 @@ class TableRow {
 			$add = '';
 		}
 
-		if ( !( is_array( $values ) || is_object( $values ) ) ) {
+		if ( ! ( is_array( $values ) || is_object( $values ) ) ) {
 
 			$where = '`' . $fieldName . '` = ' . $id . ' ' . $add;
 
@@ -216,7 +223,7 @@ class TableRow {
 			$q = "select id from $table where " . $where;
 			$prepareResult = $s->prepare( $q );
 
-			if ( !$prepareResult ) {
+			if ( ! $prepareResult ) {
 				if ( $debug ) {
 					echo 'Syntax Error. Could not prepare statement for ' . $q . PHP_EOL . TableRow::$db->error;
 				}
@@ -253,6 +260,7 @@ class TableRow {
 		if ( get_class( $r ) == 'mysqli_result' ) {
 
 			$tr = new TableRowIterator( $r, $class );
+
 			return $tr;
 
 
@@ -283,7 +291,7 @@ class TableRow {
 		$out = array();
 		for ( $i = 0; $i < $c; $i ++ ) {
 			$d = mysql_fetch_row( $r );
-			$out[$d[0]] = new $class( $d[0] );
+			$out[ $d[0] ] = new $class( $d[0] );
 		}
 
 		return $out;
@@ -291,16 +299,16 @@ class TableRow {
 
 
 	function __set( $name, $val ) {
-		if ( isset( $this->_properties[$name] ) ) {
+		if ( isset( $this->_properties[ $name ] ) ) {
 			$this->lazyLoad();
 
-			if ( ( $this->_properties[$name]['hasRelation'] ) && ( !is_object( $val ) ) && ( (int) $val > 0 ) ) {
-				$class = $this->_properties[$name]['relatedClass'];
-				$this->_properties[$name]['value'] = new $class( $val, true );
+			if ( ( $this->_properties[ $name ]['hasRelation'] ) && ( ! is_object( $val ) ) && ( (int) $val > 0 ) ) {
+				$class = $this->_properties[ $name ]['relatedClass'];
+				$this->_properties[ $name ]['value'] = new $class( $val, true );
 			} else {
-				$this->_properties[$name]['value'] = $val;
+				$this->_properties[ $name ]['value'] = $val;
 			}
-			$this->_properties[$name]['updated'] = true;
+			$this->_properties[ $name ]['updated'] = true;
 		} else {
 			$this->$name = $val;
 		}
@@ -308,10 +316,10 @@ class TableRow {
 	}
 
 	function __get( $name ) {
-		if ( isset( $this->_properties[$name] ) ) {
+		if ( isset( $this->_properties[ $name ] ) ) {
 			$this->lazyLoad();
 
-			return $this->_properties[$name]['value'];
+			return $this->_properties[ $name ]['value'];
 		} else {
 			throw new \Exception( 'Invalid model property "' . $name . '"' );
 		}
@@ -338,15 +346,15 @@ class TableRow {
 			$d = $r->fetch_assoc();
 			if ( $d != null ) {
 				foreach ( $this->_properties as $field => $pro ) {
-					$v = $d[$field];
-					if ( $pro['type'] == 'Point' )  {
-						$v = $d['trdec_' . $field];
+					$v = $d[ $field ];
+					if ( $pro['type'] == 'Point' ) {
+						$v = $d[ 'trdec_' . $field ];
 					}
 
 					if ( $pro['type'] == 'Polygon' ) {
-						$v = $d['trdec_' . $field];
+						$v = $d[ 'trdec_' . $field ];
 					}
-					$this->_properties[$field] = TableRow::TR_setValue( $pro, $v );
+					$this->_properties[ $field ] = TableRow::TR_setValue( $pro, $v );
 				}
 				$this->loaded = true;
 				$this->id = $id;
@@ -381,7 +389,7 @@ class TableRow {
 		$out = [ ];
 		$this->lazyLoad();
 		foreach ( $this->_properties as $k => $p ) {
-			$out[$k] = TableRow::TR_getValue( $p );
+			$out[ $k ] = TableRow::TR_getValue( $p );
 		}
 
 		return print_r( $out, true );
@@ -391,6 +399,7 @@ class TableRow {
 
 	function isLoaded() {
 		$this->lazyLoad();
+
 		return ( $this->loaded );
 	}
 
@@ -429,10 +438,10 @@ class TableRow {
 				if ( $p['hasRelation'] ) {
 					$types .= 'i'; // if its a relation then its type int (for the ID)
 				} else { // if not then infer the type.
-					$types .= TableRow::$_types[$p['type']];
+					$types .= TableRow::$_types[ $p['type'] ];
 				}
 
-				$values[$k] = TableRow::TR_getValue( $p );
+				$values[ $k ] = TableRow::TR_getValue( $p );
 			}
 		}
 		$s = implode( ', ', $s );
@@ -494,7 +503,7 @@ class TableRow {
 	protected static function refValues( $arr ) {
 		$refs = array();
 		foreach ( $arr as $key => $value ) {
-			$refs[$key] = & $arr[$key];
+			$refs[ $key ] = &$arr[ $key ];
 		}
 
 		return $refs;
@@ -503,8 +512,10 @@ class TableRow {
 	/**
 	 * Creates a stdClass object with all the instance variables of this model entry.
 	 * Use it to return Models to client via JSON etc
+	 *
 	 * @param bool $includeID Will include the instance ID in the properties of the static
 	 * @param bool $fromDB Will reload object from DB before creating static
+	 *
 	 * @return \stdClass
 	 */
 	function getStaticObject( $includeID = false, $fromDB = false ) {
@@ -532,11 +543,12 @@ class TableRow {
 
 			$s->$k = static::TR_getValue( $prop );
 		}
+
 		return $s;
 	}
 
 	function save( $debug = false ) {
-		if ( !$this->lazy ) {
+		if ( ! $this->lazy ) {
 			$s = TableRow::$db->stmt_init();
 			if ( $this->id == null ) {
 
@@ -568,13 +580,13 @@ class TableRow {
 						if ( $prop['hasRelation'] ) {
 							$types .= 'i';
 						} else {
-							$types .= TableRow::$_types[$prop['type']];
+							$types .= TableRow::$_types[ $prop['type'] ];
 						}
 						$values[] = TableRow::TR_getValue( $prop );
 					}
 
 					if ( $debug ) {
-						echo '<br> types:' . $types . ' values:' . print_r( $values,true ) . '<br>';
+						echo '<br> types:' . $types . ' values:' . print_r( $values, true ) . '<br>';
 					}
 					call_user_func_array( [
 						$s,
