@@ -19,7 +19,6 @@ class Point {
 	}
 
 	public function __toString() {
-
 		return 'POINT(' . $this->values[0] . ' ' . $this->values[1] . ')';
 	}
 
@@ -34,6 +33,7 @@ class Point {
 		$s = strtoupper( $s );
 		$s = str_replace( [ 'POINT(', ')' ], [ '', '' ], $s );
 		$pair = explode( ' ', $s );
+		if (count($pair)<2) $pair = [0,0];
 
 		$p->values = $pair;
 		return $p;
