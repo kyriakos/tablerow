@@ -2,6 +2,7 @@
 namespace Brainvial\TableRow;
 
 
+use Brainvial\Framework\U;
 use Brainvial\TableRow\TableRowIterator;
 use Brainvial\TableRow\Point;
 use Brainvial\TableRow\Polygon;
@@ -64,12 +65,22 @@ class TableRow {
 				$debug = true;
 			}
 			$res = TableRow::$db->query( $query );
+			if ( $debug ) {
+				echo $query;
+			}
 		}
 
 
 		return $res->fetch_array()[0];
 	}
 
+	/**
+	 * @param $q
+	 * @param $values
+	 * @param bool $debug
+	 *
+	 * @return bool|\mysqli_result|null
+	 */
 	static function preparedQuery( $q, $values, $debug = false ) {
 		$s = TableRow::$db->stmt_init();
 
@@ -92,7 +103,9 @@ class TableRow {
 
 			} else {
 				if ( $debug ) {
-					echo 'Error Binding query:' . $q . ' types:' . $types . ' values:' . print_r( $values, true );
+					U::toLog( 'Error Binding query:' . $q . ' types:' . $types . ' values:' . print_r( $values, true ) );
+					echo( 'Error Binding query:' . $q . ' types:' . $types . ' values:' . print_r( $values, true ) );
+
 				}
 
 				return null;
@@ -111,7 +124,7 @@ class TableRow {
 			'"utf8"'
 		);
 
-		$db->query("SET NAMES 'UTF8';");
+		$db->query( "SET NAMES 'UTF8';" );
 
 		static::$db = $db;
 	}
@@ -221,6 +234,7 @@ class TableRow {
 
 			$s = TableRow::$db->stmt_init();
 			$q = "select id from $table where " . $where;
+
 			$prepareResult = $s->prepare( $q );
 
 			if ( ! $prepareResult ) {
@@ -248,6 +262,7 @@ class TableRow {
 
 				} else {
 					if ( $debug ) {
+						U::toLog( 'Error Binding query:' . $q . ' types:' . $types . ' values:' . print_r( $values, true ) );
 						echo 'Error Binding query:' . $q . ' types:' . $types . ' values:' . print_r( $values, true );
 					}
 				}
