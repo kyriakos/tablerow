@@ -57,8 +57,9 @@ class TableRow {
 			$q = 1;
 		}
 
-		$query = "select count(id) as totalcols from " . static::$_table . ' where ' . $q;
+		$query = "SELECT count(id) AS totalcols FROM " . static::$_table . ' WHERE ' . $q;
 		if ( is_array( $values ) ) {
+			static::replaceModelsWithIDs($values);
 			$res = TableRow::preparedQuery( $query, $values, $debug );
 		} else {
 			if ( $values === true ) {
@@ -200,6 +201,20 @@ class TableRow {
 
 	}
 
+	private static function replaceModelsWithIDs(&$values) {
+		foreach ( $values as $key => $val ) {
+			if ( is_object( $val ) ) {
+
+				if ( is_subclass_of( $val, 'Brainvial\TableRow\TableRow' ) === false ) {
+					throw new \Exception( 'TableRow: Bind Value an object but not subclass of Brainvial\TableRow\TableRow' );
+				} else {
+					$values[ $key ] = $val->id;
+				}
+			} else {
+				$values[ $key ] = $val;
+			}
+		}
+	}
 
 	public static function select( $where = null, $values = null, $debug = false, $lazy = false ) {
 
@@ -224,6 +239,7 @@ class TableRow {
 		// if we got an array of values then we should use a prepared statement
 		if ( is_array( $values ) ) {
 			$useBind = true;
+			static::replaceModelsWithIDs($values);
 		}
 
 
