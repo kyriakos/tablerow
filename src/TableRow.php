@@ -59,7 +59,7 @@ class TableRow {
 
 		$query = "SELECT count(id) AS totalcols FROM " . static::$_table . ' WHERE ' . $q;
 		if ( is_array( $values ) ) {
-			static::replaceModelsWithIDs($values);
+			static::replaceModelsWithIDs( $values );
 			$res = TableRow::preparedQuery( $query, $values, $debug );
 		} else {
 			if ( $values === true ) {
@@ -201,7 +201,7 @@ class TableRow {
 
 	}
 
-	private static function replaceModelsWithIDs(&$values) {
+	private static function replaceModelsWithIDs( &$values ) {
 		foreach ( $values as $key => $val ) {
 			if ( is_object( $val ) ) {
 
@@ -239,7 +239,7 @@ class TableRow {
 		// if we got an array of values then we should use a prepared statement
 		if ( is_array( $values ) ) {
 			$useBind = true;
-			static::replaceModelsWithIDs($values);
+			static::replaceModelsWithIDs( $values );
 		}
 
 
@@ -287,7 +287,9 @@ class TableRow {
 			$r = TableRow::query( "select id from $table where $where", $debug );
 		}
 		$out = [ ];
-
+		if ( ! is_object( $r ) ) {
+			throw new \Exception( 'Invalid Query ' . static::$db->error );
+		}
 		if ( get_class( $r ) == 'mysqli_result' ) {
 
 			$tr = new TableRowIterator( $r, $class );

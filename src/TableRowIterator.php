@@ -12,7 +12,7 @@ use mysqli_result;
 use mysqli;
 use Iterator, Countable;
 
-class TableRowIterator implements Iterator, Countable {
+class TableRowIterator implements Iterator, Countable, \ArrayAccess {
 	/**
 	 * (PHP 5 &gt;= 5.1.0)<br/>
 	 * Count elements of an object
@@ -27,6 +27,7 @@ class TableRowIterator implements Iterator, Countable {
 	}
 
 
+	private $total = 0;
 	/**
 	 * @var \mysqli_result|null
 	 */
@@ -52,6 +53,7 @@ class TableRowIterator implements Iterator, Countable {
 		if ( $this->currentObj == null ) {
 			$this->next();
 		}
+
 		return $this->currentObj;
 	}
 
@@ -110,7 +112,31 @@ class TableRowIterator implements Iterator, Countable {
 		$this->position = 0;
 		$this->resultSet = $resultSet;
 		$this->class = $class;
+		$this->total = $resultSet->num_rows;
 	}
 
 
+	public function offsetExists( $offset ) {
+		return ( $offset >= 0 ) && ( $offset < $this->total );
+	}
+
+	public function offsetGet( $offset ) {
+		$this->resultSet->data_seek( $offset );
+		$this->position = $offset;
+		$this->next();
+
+		return $this->currentObj;
+	}
+
+	public function offsetSet( $offset, $value ) {
+		// do nothing
+	}
+
+	public function offsetUnset( $offset ) {
+		// do nothing
+	}
+
+	public function end() {
+		return $this->offsetGet( $this->total - 1 );
+	}
 }
