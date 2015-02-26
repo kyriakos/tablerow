@@ -130,11 +130,19 @@ class TableRow {
 		static::$db = $db;
 	}
 
+	/**
+	 * @return string
+	 */
 	static function getTableName() {
 		return static::$_table;
 	}
 
 
+	/**
+	 * @param $id
+	 *
+	 * @return boolean
+	 */
 	static function entryExists( $id ) {
 		$id = (int) $id;
 		$class = get_called_class();
@@ -579,6 +587,73 @@ class TableRow {
 
 		return $s;
 	}
+
+	/**
+	 * @param string $query The query to call (must select ID only)
+	 * @param array $values Values to feed in the prepared query
+	 * @param null $resultClass The class the selected id will instantiate
+	 * @param bool $debug
+	 *
+	 * @return array|TableRowIterator
+	 */
+	public static function queryTableRowList( $query = '', $values = [ ], $resultClass = null, $debug = false ) {
+
+
+		$useBind = true;
+		$lazy = true;
+
+		if ( is_object( $values ) ) {
+			$values = get_object_vars( $values );
+		}
+
+
+		$s = TableRow::$db->stmt_init();
+
+		$prepareResult = $s->prepare( $query );
+
+		if ( ! $prepareResult ) {
+			if ( $debug ) {
+				echo 'Syntax Error. Could not prepare statement for ' . $query . PHP_EOL . TableRow::$db->error;
+			}
+		} else {
+			$types = TableRow::getMYSQLiValueTypes( $values );
+
+			$bindResult = call_user_func_array( [
+				$s,
+				'bind_param'
+			], TableRow::refValues( array_merge( [ $types ], $values ) ) );
+
+			if ( $bindResult ) {
+
+				if ( $s->execute() ) {
+					$r = $s->get_result();
+				} else {
+					U::toLog( 'Error Executing query:' . $query . ' types:' . $types . ' values:' . print_r( $values, true ) );
+					if ( $debug ) {
+						echo 'Error Executing query:' . $query . ' types:' . $types . ' values:' . print_r( $values, true );
+					}
+				}
+
+			} else {
+				U::toLog( 'Error Binding query:' . $query . ' types:' . $types . ' values:' . print_r( $values, true ) );
+				if ( $debug ) {
+					echo 'Error Binding query:' . $query. ' types:' . $types . ' values:' . print_r( $values, true );
+				}
+			}
+		}
+
+		$out = [ ];
+
+		if ( get_class( $r ) == 'mysqli_result' ) {
+
+			$tr = new TableRowIterator( $r, $resultClass );
+
+			return $tr;
+		}
+
+		return $out;
+	}
+
 
 	function save( $debug = false ) {
 		if ( ! $this->lazy ) {
