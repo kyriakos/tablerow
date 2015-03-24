@@ -1,0 +1,35 @@
+{
+  "modelPath": "site/models/",
+  "tables": {
+    "User": {
+      "table": "users",
+      "relations": [
+        {
+          "class": "Article",
+          "foreignKey": "user",
+          "method": "getArticles",
+          "type": "*"
+        }
+      ]
+    },
+    "Article": {
+      "table": "articles"
+    },
+    "Category": {
+      "table": "categories",
+      "relations": [
+        {
+          "class": "Article",
+          "intermediate": "RelCategoryArticles",
+          "foreignKey": "article",
+          "ownerKey": "category",
+          "method": "getArticles",
+          "type": "*"
+        }
+      ]
+    },
+    "RelCategoryArticles": {
+      "table": "categories_articles"
+    }
+  }
+}
