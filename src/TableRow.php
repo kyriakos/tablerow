@@ -1,5 +1,5 @@
 <?php
-namespace Brainvial\TableRow;
+namespace Kyriakos\TableRow;
 
 use Brainvial\TableRow\TableRowIterator;
 use Brainvial\TableRow\Point;

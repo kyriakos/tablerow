@@ -6,7 +6,7 @@
  * Time: 15:40
  */
 
-namespace Brainvial\TableRow;
+namespace Kyriakos\TableRow;
 
 use mysqli_result;
 use mysqli;

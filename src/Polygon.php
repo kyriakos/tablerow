@@ -6,7 +6,7 @@
  * Time: 07:57
  */
 
-namespace Brainvial\TableRow;
+namespace Kyriakos\TableRow;
 
 class Polygon {
 

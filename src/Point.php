@@ -6,7 +6,7 @@
  * Time: 08:51
  */
 
-namespace Brainvial\TableRow;
+namespace Kyriakos\TableRow;
 
 class Point {
 
