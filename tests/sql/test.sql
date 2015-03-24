@@ -1,37 +1,46 @@
--- required for testing
+/*Table structure for table `articles` */
 
-SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
+DROP TABLE IF EXISTS `articles`;
 
---
--- Database: `tablerow_tests`
---
-
--- --------------------------------------------------------
-
---
--- Table structure for table `article`
---
-
-CREATE TABLE IF NOT EXISTS `article` (
+CREATE TABLE `articles` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `title` varchar(128) NOT NULL,
-  `content` text NOT NULL,
-  `post_date` datetime NOT NULL,
-  `categoryid` int(11) NOT NULL COMMENT 'fk:categories.id',
-  `authorid` int(10) unsigned NOT NULL COMMENT 'fk:users.id',
+  `content` text,
+  `timeposted` datetime DEFAULT NULL,
+  `user` int(10) unsigned DEFAULT NULL COMMENT 'fk:User.id',
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+/*Table structure for table `categories` */
 
---
--- Table structure for table `categories`
---
+DROP TABLE IF EXISTS `categories`;
 
-CREATE TABLE IF NOT EXISTS `categories` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `title` varchar(64) NOT NULL,
-  `parentcategoryid` int(11) unsigned NOT NULL COMMENT 'fk:categories.id',
+CREATE TABLE `categories` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(128) DEFAULT NULL,
+  `parent` int(10) unsigned DEFAULT NULL COMMENT 'fk:Category.id',
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+
+/*Table structure for table `categories_articles` */
+
+DROP TABLE IF EXISTS `categories_articles`;
+
+CREATE TABLE `categories_articles` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `category` int(10) unsigned DEFAULT NULL COMMENT 'fk:Category.id',
+  `article` int(10) unsigned DEFAULT NULL COMMENT 'fk:Article.id',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+
+/*Table structure for table `users` */
+
+DROP TABLE IF EXISTS `users`;
+
+CREATE TABLE `users` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `lastsignin` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+
