@@ -1,5 +1,5 @@
 <?
-use Brainvial\TableRow\TableRow;
+use kyriakos\TableRow\TableRow;
 
 $dir = getcwd();
 include $dir . '/site/config.php';
@@ -17,7 +17,7 @@ if ( isset( $schema->modelPath ) ) {
 	$modelPath = $dir . '/models/';
 }
 
-\Brainvial\TableRow\TableRow::connectDB( $config );
+TableRow::connectDB( $config );
 
 
 if ( ! isset( $schema->tables ) ) {
@@ -33,9 +33,9 @@ foreach ( $schema->tables as $className => $settings ) {
 function processTable( $settings, $className ) {
 	$table = $settings->table;
 	global $db;
-	$r = Brainvial\TableRow\TableRow::query( "show full columns from $table", false );
+	$r = TableRow::query( "show full columns from $table", false );
 	if ( TableRow::$db->errno == 0 ) {
-		echo '<' . '? ' . PHP_EOL . 'use Brainvial\TableRow\TableRow;' . PHP_EOL . PHP_EOL;
+		echo '<' . '? ' . PHP_EOL . 'use kyriakos\TableRow\TableRow;' . PHP_EOL . PHP_EOL;
 		outputProperties( $r, $className );
 		?>
 

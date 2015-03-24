@@ -1,9 +1,9 @@
 <?php
 namespace Kyriakos\TableRow;
 
-use Brainvial\TableRow\TableRowIterator;
-use Brainvial\TableRow\Point;
-use Brainvial\TableRow\Polygon;
+use kyriakos\TableRow\TableRowIterator;
+use kyriakos\TableRow\Point;
+use kyriakos\TableRow\Polygon;
 
 use mysqli;
 
@@ -152,8 +152,8 @@ class TableRow {
 		foreach ( $values as $key => $val ) {
 			if ( is_object( $val ) ) {
 
-				if ( is_subclass_of( $val, 'Brainvial\TableRow\TableRow' ) === false ) {
-					throw new \Exception( 'TableRow: Bind Value an object but not subclass of Brainvial\TableRow\TableRow' );
+				if ( is_subclass_of( $val, 'kyriakos\TableRow\TableRow' ) === false ) {
+					throw new \Exception( 'TableRow: Bind Value an object but not subclass of kyriakos\TableRow\TableRow' );
 				} else {
 					$values[ $key ] = $val->id;
 				}
@@ -422,7 +422,7 @@ class TableRow {
 	 * @param $IDofBinIntermediate
 	 * @param $debug
 	 *
-	 * @return \Brainvial\TableRow\TableRowIterator
+	 * @return \kyriakos\TableRow\TableRowIterator
 	 */
 
 	public static function selectIntermediate( $_this, $query, $values, $classA, $classB, $intClass, $IDofAinIntermediate, $IDofBinIntermediate, $debug = false ) {
