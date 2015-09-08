@@ -1,7 +1,7 @@
 {
     "name": "kyriakos/tablerow",
     "autoload": {
-        "psr-4": {"kyriakos\\TableRow\\": "src/"}
+        "psr-4": {"Kyriakos\\TableRow\\": "src/"}
     }
 
 }
