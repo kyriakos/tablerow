@@ -6,7 +6,7 @@
  * Time: 15:40
  */
 
-namespace Kyriakos\TableRow;
+namespace kyriakos\TableRow;
 
 use mysqli_result;
 use mysqli;

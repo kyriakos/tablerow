@@ -1,5 +1,5 @@
 <?php
-namespace Kyriakos\TableRow;
+namespace kyriakos\TableRow;
 
 use kyriakos\TableRow\TableRowIterator;
 use kyriakos\TableRow\Point;
