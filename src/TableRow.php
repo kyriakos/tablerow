@@ -1,9 +1,9 @@
 <?php
-namespace kyriakos\TableRow;
+namespace Kyriakos\TableRow;
 
-use kyriakos\TableRow\TableRowIterator;
-use kyriakos\TableRow\Point;
-use kyriakos\TableRow\Polygon;
+use Kyriakos\TableRow\TableRowIterator;
+use Kyriakos\TableRow\Point;
+use Kyriakos\TableRow\Polygon;
 
 use mysqli;
 
