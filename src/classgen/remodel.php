@@ -39,6 +39,7 @@ function processTable( $settings, $className ) {
 		outputProperties( $r, $className );
 		?>
 
+		namespace App\Models;
 
 		class <?= $className ?> extends TableRow {
 
